@@ -1,0 +1,80 @@
+version: '3'
+services:
+  #PHP Service
+  laravel_app:
+    build:
+      args:
+        user: dollar
+        uid: 1000
+      context: .
+      dockerfile: Dockerfile
+    image: laravel_app
+    depends_on:
+      - mysql_service
+    container_name: app
+    restart: always
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  #Nginx Service
+  webserver:
+    image: nginx:alpine
+    container_name: nginx
+    depends_on:
+      - laravel_app
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - app-network
+
+  #MySQL Service
+  mysql_service:
+    image: mysql:5.7.22
+    container_name: mysql
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: doll
+      MYSQL_DATABASE: doll
+      MYSQL_USER: doll
+      MYSQL_PASSWORD: doll
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - app-network
+
+#  mosquitto_service:
+#    image: eclipse-mosquitto
+#    restart: always
+#    volumes:
+#      - ./mosquitto/config:/mosquitto/conf:rw
+#      - ./mosquitto/data:/mosquitto/data:rw
+#      - ./mosquitto/log:/mosquitto/log:rw
+#    container_name: mosquitto
+#    ports:
+#      - "1883:1883"
+#      - "9001:9001"
+#    networks:
+#      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local
